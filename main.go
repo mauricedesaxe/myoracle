@@ -34,6 +34,11 @@ func runNode(link string) {
 	}
 	fmt.Println("First synced to:", len(nodes), "nodes")
 
+	// TODO the idea here is that nodes talk to each other to see if they are
+	// in a round. If they aren't in a round, every X seconds one randomly elected node
+	// will start a round. If a node starts a round, all of them try to get the price
+	// from CoinGecko and CoinMarketCap and then calculate the median of medians. If the median is
+	// above or below the last median, they update the last median and the leaderboard.
 	for {
 		time.Sleep(3 * time.Second)
 
