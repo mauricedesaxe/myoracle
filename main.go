@@ -20,8 +20,15 @@ func main() {
 	link := flag.String("link", "", "The url of the first node to sync to, will be used to sync the other nodes")
 	flag.Parse()
 
+	if *link == "" {
+		panic("link is required")
+	}
+	runNode(*link)
+}
+
+func runNode(link string) {
 	// do an initial sync to get the nodes
-	nodes, err := requestNodes(*link)
+	nodes, err := requestNodes(link)
 	if err != nil {
 		panic("error first syncing nodes: " + err.Error())
 	}
