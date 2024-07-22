@@ -16,24 +16,37 @@ var coinGecko = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=" + 
 	"&ids=" + asset + "&order=market_cap_by_total_volume&per_page=100&page=1&sparkline=false&price_change_percentage=24h&locale=en"
 var coinMarketCap = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol=" + asset + "&convert=" + denomination
 
-func main() {
-	link := flag.String("link", "", "The url of the first node to sync to, will be used to sync the other nodes")
-	flag.Parse()
-
-	runNode(*link)
+type NodeConfig struct {
+	Link    string
+	BaseUrl string
+	Port    string
 }
 
-func runNode(link string) {
-	var err error
+func main() {
+	link := flag.String("link", "", "The url of the first node to sync to, will be used to sync the other nodes")
+	baseUrl := flag.String("baseUrl", "http://localhost", "The base url of the node")
+	port := flag.String("port", ":3000", "The port of the node")
+	flag.Parse()
 
+	runNode(NodeConfig{
+		Link:    *link,
+		BaseUrl: *baseUrl,
+		Port:    *port,
+	})
+}
+
+func runNode(config NodeConfig) {
 	// do an initial sync to get the nodes
-	var nodes []string
-	if link != "" {
-		log.Println("Syncing to:", link)
-		nodes, err = requestNodes(link)
+	nodes := []string{
+		config.BaseUrl + config.Port,
+	}
+	if config.Link != "" {
+		log.Println("Syncing to:", config.Link)
+		n, err := requestNodes(config.Link)
 		if err != nil {
 			panic("error first syncing nodes: " + err.Error())
 		}
+		nodes = append(nodes, n...)
 		log.Println("Synced to:", len(nodes), "nodes")
 	}
 
@@ -48,8 +61,8 @@ func runNode(link string) {
 
 	// Start the HTTP server to communicate with other nodes
 	go func() {
-		log.Println("Starting HTTP server on :3000")
-		if err := http.ListenAndServe(":3000", nil); err != nil {
+		log.Println("Starting HTTP server on " + fmt.Sprintf("%s%s", config.BaseUrl, config.Port))
+		if err := http.ListenAndServe(config.Port, nil); err != nil {
 			log.Fatalf("HTTP server failed: %s", err)
 		}
 	}()
