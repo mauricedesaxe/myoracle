@@ -19,21 +19,24 @@ var coinGecko = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=" + 
 var coinMarketCap = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol=" + asset + "&convert=" + denomination
 
 type NodeConfig struct {
-	Link    string
-	BaseUrl string
-	Port    string
+	Link          string
+	BaseUrl       string
+	Port          string
+	DiffThreshold float64
 }
 
 func main() {
 	link := flag.String("link", "", "The url of the first node to sync to, will be used to sync the other nodes")
 	baseUrl := flag.String("baseUrl", "http://localhost", "The base url of the node")
 	port := flag.String("port", ":3000", "The port of the node")
+	diffThreshold := flag.Float64("diffThreshold", 0.01, "The threshold for the median to change by")
 	flag.Parse()
 
 	runNode(NodeConfig{
-		Link:    *link,
-		BaseUrl: *baseUrl,
-		Port:    *port,
+		Link:          *link,
+		BaseUrl:       *baseUrl,
+		Port:          *port,
+		DiffThreshold: *diffThreshold,
 	})
 }
 
@@ -109,10 +112,10 @@ func runNode(config NodeConfig) {
 
 			diff := median - lastMedian
 			relDiff := diff / lastMedian
-			if relDiff < 0.01 {
+			if relDiff < config.DiffThreshold {
 				continue
 			}
-			log.Println("Median changed by more than 1%")
+			log.Println("Median changed by more than", config.DiffThreshold*100, "%, sending to nodes")
 
 			// send the median to all nodes
 			log.Println(time.Now().Format("2006-01-02 15:04:05"), "Sending median:", median)
