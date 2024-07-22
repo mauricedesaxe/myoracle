@@ -160,13 +160,11 @@ func requestNodes(node string) ([]string, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	type Response struct {
-		Nodes []string `json:"nodes"`
-	}
-	var response Response
-	err = json.NewDecoder(resp.Body).Decode(&response)
+
+	var nodes []string
+	err = json.NewDecoder(resp.Body).Decode(&nodes)
 	if err != nil {
 		return nil, err
 	}
-	return response.Nodes, nil
+	return nodes, nil
 }
