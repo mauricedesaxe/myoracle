@@ -63,7 +63,40 @@ func runNode(config NodeConfig) {
 
 	var isRound bool
 
-	// Start the leader election
+	// POST /median - receives the median from the leader, and sends back a median if the req is valid
+	http.HandleFunc("/median", func(w http.ResponseWriter, r *http.Request) {
+		// only allow POST requests
+		if r.Method != "POST" {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		// decode median
+		type Request struct {
+			Median float64 `json:"median"`
+		}
+		var request Request
+		err := json.NewDecoder(r.Body).Decode(&request)
+		if err != nil {
+			http.Error(w, "Bad request", http.StatusBadRequest)
+			return
+		}
+
+		// if median from leader is valid, start round and provide a median back
+		log.Println(time.Now().Format("2006-01-02 15:04:05"), "Received median:", request.Median)
+		isRound = true
+		_, err = http.Post(
+			config.BaseUrl+config.Port+"/median",
+			"application/json",
+			bytes.NewBuffer([]byte(fmt.Sprintf(`{"median": %f}`, request.Median))),
+		)
+		if err != nil {
+			log.Println("Error sending median:", err)
+		}
+		isRound = false
+	})
+
+	// Try to start a round every 10 seconds as a leader
 	go func() {
 		for {
 			if isRound {
@@ -71,15 +104,15 @@ func runNode(config NodeConfig) {
 			}
 			isRound = true
 
-			// fake get data from 3 providers
-			price1 := 999 + rand.Float64()*2
-			price2 := 999 + rand.Float64()*2
-			price3 := 999 + rand.Float64()*2
-			median := (price1 + price2 + price3) / 3
-			log.Println(time.Now().Format("2006-01-02 15:04:05"), "Median price:", median)
 			// send the median to all nodes
+			median := getFakeMedian()
+			log.Println(time.Now().Format("2006-01-02 15:04:05"), "Sending median:", median)
 			for _, node := range nodes {
-				http.Post(node+"/median", "application/json", bytes.NewBuffer([]byte(fmt.Sprintf(`{"median": %f}`, median))))
+				http.Post(
+					node+"/median",
+					"application/json",
+					bytes.NewBuffer([]byte(fmt.Sprintf(`{"median": %f}`, median))),
+				)
 			}
 
 			isRound = false
@@ -94,6 +127,14 @@ func runNode(config NodeConfig) {
 			log.Fatalf("HTTP server failed: %s", err)
 		}
 	}()
+}
+
+func getFakeMedian() float64 {
+	price1 := 999 + rand.Float64()*2
+	price2 := 999 + rand.Float64()*2
+	price3 := 999 + rand.Float64()*2
+	median := (price1 + price2 + price3) / 3
+	return median
 }
 
 func requestNodes(node string) ([]string, error) {
