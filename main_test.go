@@ -1,7 +1,29 @@
 package main
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestMain(t *testing.T) {
-	main()
+	// Run the first node
+	go runNode(NodeConfig{
+		Link:          "",
+		BaseUrl:       "http://localhost",
+		Port:          ":3000",
+		DiffThreshold: 0.01,
+		TimeInterval:  1,
+	})
+
+	// Run the second node
+	go runNode(NodeConfig{
+		Link:          "http://localhost:3000",
+		BaseUrl:       "http://localhost",
+		Port:          ":3001",
+		DiffThreshold: 0.01,
+		TimeInterval:  1,
+	})
+
+	// Allow some time for nodes to communicate
+	time.Sleep(5 * time.Second)
 }
