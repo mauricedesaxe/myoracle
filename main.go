@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math/rand/v2"
 	"net/http"
 	"time"
 )
@@ -67,26 +68,24 @@ func runNode(config NodeConfig) {
 		}
 	}()
 
-	// TODO the idea here is that nodes talk to each other to see if they are
-	// in a round. If they aren't in a round, every X seconds one randomly elected node
-	// will start a round. If a node starts a round, all of them try to get the price
-	// from CoinGecko and CoinMarketCap and then calculate the median of medians. If the median is
-	// above or below the last median, they update the last median and the leaderboard.
+	var isRound bool
+
+	// Start the leader election
 	for {
-		time.Sleep(3 * time.Second)
-
-		price1, err := getPriceFromCoinGecko()
-		if err != nil {
-			log.Println("error getting price from coin gecko: " + err.Error())
+		if isRound {
+			continue
 		}
+		isRound = true
 
-		price2, err := getPriceFromCoinMarketCap()
-		if err != nil {
-			log.Println("error getting price from coin market cap: " + err.Error())
-		}
+		// fake get data from 3 providers
+		price1 := 999 + rand.Float64()*2
+		price2 := 999 + rand.Float64()*2
+		price3 := 999 + rand.Float64()*2
+		median := (price1 + price2 + price3) / 3
+		log.Println(time.Now().Format("2006-01-02 15:04:05"), "Median price:", median)
 
-		median := (price1 + price2) / 2
-		fmt.Println("Median price:", median)
+		isRound = false
+		time.Sleep(10 * time.Second)
 	}
 }
 
@@ -111,38 +110,4 @@ func requestNodes(node string) ([]string, error) {
 		return nil, err
 	}
 	return response.Nodes, nil
-}
-
-func getPriceFromCoinGecko() (float64, error) {
-	resp, err := http.Get(coinGecko)
-	if err != nil {
-		return 0, err
-	}
-	defer resp.Body.Close()
-	type Response struct {
-		Price float64 `json:"price"`
-	}
-	var response Response
-	err = json.NewDecoder(resp.Body).Decode(&response)
-	if err != nil {
-		return 0, err
-	}
-	return response.Price, nil
-}
-
-func getPriceFromCoinMarketCap() (float64, error) {
-	resp, err := http.Get(coinMarketCap)
-	if err != nil {
-		return 0, err
-	}
-	defer resp.Body.Close()
-	type Response struct {
-		Price float64 `json:"price"`
-	}
-	var response Response
-	err = json.NewDecoder(resp.Body).Decode(&response)
-	if err != nil {
-		return 0, err
-	}
-	return response.Price, nil
 }
