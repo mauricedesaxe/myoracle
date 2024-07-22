@@ -11,13 +11,6 @@ import (
 	"time"
 )
 
-var asset = "ETH"
-var denomination = "USD"
-
-var coinGecko = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=" + denomination +
-	"&ids=" + asset + "&order=market_cap_by_total_volume&per_page=100&page=1&sparkline=false&price_change_percentage=24h&locale=en"
-var coinMarketCap = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol=" + asset + "&convert=" + denomination
-
 type NodeConfig struct {
 	Link          string
 	BaseUrl       string
