@@ -20,19 +20,22 @@ func main() {
 	link := flag.String("link", "", "The url of the first node to sync to, will be used to sync the other nodes")
 	flag.Parse()
 
-	if *link == "" {
-		panic("link is required")
-	}
 	runNode(*link)
 }
 
 func runNode(link string) {
+	var err error
+
 	// do an initial sync to get the nodes
-	nodes, err := requestNodes(link)
-	if err != nil {
-		panic("error first syncing nodes: " + err.Error())
+	var nodes []string
+	if link != "" {
+		log.Println("Syncing to:", link)
+		nodes, err = requestNodes(link)
+		if err != nil {
+			panic("error first syncing nodes: " + err.Error())
+		}
+		log.Println("Synced to:", len(nodes), "nodes")
 	}
-	fmt.Println("First synced to:", len(nodes), "nodes")
 
 	// TODO the idea here is that nodes talk to each other to see if they are
 	// in a round. If they aren't in a round, every X seconds one randomly elected node
