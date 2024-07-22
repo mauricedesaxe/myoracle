@@ -57,6 +57,7 @@ func runNode(config NodeConfig) {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
+		log.Println(time.Now().Format("2006-01-02 15:04:05"), "Sync request from:", r.RemoteAddr)
 		json.NewEncoder(w).Encode(nodes)
 	})
 
@@ -83,7 +84,7 @@ func runNode(config NodeConfig) {
 		}
 
 		// if median from leader is valid, start round and provide a median back
-		log.Println(time.Now().Format("2006-01-02 15:04:05"), "Received median:", request.Median)
+		log.Println(time.Now().Format("2006-01-02 15:04:05"), "Received median from:", r.RemoteAddr, "value:", request.Median)
 		isRound = true
 		_, err = http.Post(
 			config.BaseUrl+config.Port+"/median",
