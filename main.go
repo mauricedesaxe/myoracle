@@ -37,6 +37,8 @@ func main() {
 }
 
 func runNode(config NodeConfig) {
+	mux := http.NewServeMux()
+
 	// do an initial sync to get the nodes
 	nodes := []string{
 		config.BaseUrl + config.Port,
@@ -52,7 +54,7 @@ func runNode(config NodeConfig) {
 	}
 
 	// POST /sync - returns a list of nodes
-	http.HandleFunc("/sync", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/sync", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -65,7 +67,7 @@ func runNode(config NodeConfig) {
 	var lastMedian float64
 
 	// POST /median - receives the median from the leader, and sends back a median if the req is valid
-	http.HandleFunc("/median", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/median", func(w http.ResponseWriter, r *http.Request) {
 		// only allow POST requests
 		if r.Method != "POST" {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -135,7 +137,7 @@ func runNode(config NodeConfig) {
 
 	// Start the HTTP server to communicate with other nodes
 	log.Println("Starting HTTP server on " + fmt.Sprintf("%s%s", config.BaseUrl, config.Port))
-	if err := http.ListenAndServe(config.Port, nil); err != nil {
+	if err := http.ListenAndServe(config.Port, mux); err != nil {
 		log.Fatalf("HTTP server failed: %s", err)
 	}
 }
