@@ -131,12 +131,10 @@ func runNode(config NodeConfig) {
 	}()
 
 	// Start the HTTP server to communicate with other nodes
-	go func() {
-		log.Println("Starting HTTP server on " + fmt.Sprintf("%s%s", config.BaseUrl, config.Port))
-		if err := http.ListenAndServe(config.Port, nil); err != nil {
-			log.Fatalf("HTTP server failed: %s", err)
-		}
-	}()
+	log.Println("Starting HTTP server on " + fmt.Sprintf("%s%s", config.BaseUrl, config.Port))
+	if err := http.ListenAndServe(config.Port, nil); err != nil {
+		log.Fatalf("HTTP server failed: %s", err)
+	}
 }
 
 func getFakeMedian() float64 {
