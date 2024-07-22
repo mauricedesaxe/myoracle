@@ -88,7 +88,7 @@ func runNode(config NodeConfig) {
 		_, err = http.Post(
 			config.BaseUrl+config.Port+"/median",
 			"application/json",
-			bytes.NewBuffer([]byte(fmt.Sprintf(`{"median": %f}`, request.Median))),
+			bytes.NewBuffer([]byte(fmt.Sprintf(`{"median": %f}`, getFakeMedian()))),
 		)
 		if err != nil {
 			log.Println("Error sending median:", err)
