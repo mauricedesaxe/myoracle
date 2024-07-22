@@ -37,6 +37,23 @@ func runNode(link string) {
 		log.Println("Synced to:", len(nodes), "nodes")
 	}
 
+	// POST /sync - returns a list of nodes
+	http.HandleFunc("/sync", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		json.NewEncoder(w).Encode(nodes)
+	})
+
+	// Start the HTTP server to communicate with other nodes
+	go func() {
+		log.Println("Starting HTTP server on :3000")
+		if err := http.ListenAndServe(":3000", nil); err != nil {
+			log.Fatalf("HTTP server failed: %s", err)
+		}
+	}()
+
 	// TODO the idea here is that nodes talk to each other to see if they are
 	// in a round. If they aren't in a round, every X seconds one randomly elected node
 	// will start a round. If a node starts a round, all of them try to get the price
