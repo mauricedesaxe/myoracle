@@ -117,6 +117,9 @@ func runNode(config NodeConfig) {
 			// send the median to all nodes
 			log.Println(time.Now().Format("2006-01-02 15:04:05"), "Sending median:", median)
 			for _, node := range nodes {
+				if node == config.BaseUrl+config.Port {
+					continue
+				}
 				http.Post(
 					node+"/median",
 					"application/json",
