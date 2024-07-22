@@ -16,6 +16,7 @@ type NodeConfig struct {
 	BaseUrl       string
 	Port          string
 	DiffThreshold float64
+	TimeInterval  int
 }
 
 func main() {
@@ -23,6 +24,7 @@ func main() {
 	baseUrl := flag.String("baseUrl", "http://localhost", "The base url of the node")
 	port := flag.String("port", ":3000", "The port of the node")
 	diffThreshold := flag.Float64("diffThreshold", 0.01, "The threshold for the median to change by")
+	timeInterval := flag.Int("timeInterval", 10, "The time interval in seconds to wait before sending a new median")
 	flag.Parse()
 
 	runNode(NodeConfig{
@@ -30,6 +32,7 @@ func main() {
 		BaseUrl:       *baseUrl,
 		Port:          *port,
 		DiffThreshold: *diffThreshold,
+		TimeInterval:  *timeInterval,
 	})
 }
 
@@ -122,7 +125,7 @@ func runNode(config NodeConfig) {
 
 			lastMedian = median
 			isRound = false
-			time.Sleep(10 * time.Second)
+			time.Sleep(time.Duration(config.TimeInterval) * time.Second)
 		}
 	}()
 
