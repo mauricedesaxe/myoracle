@@ -61,6 +61,32 @@ func runNode(config NodeConfig) {
 		json.NewEncoder(w).Encode(nodes)
 	})
 
+	var isRound bool
+
+	// Start the leader election
+	go func() {
+		for {
+			if isRound {
+				continue
+			}
+			isRound = true
+
+			// fake get data from 3 providers
+			price1 := 999 + rand.Float64()*2
+			price2 := 999 + rand.Float64()*2
+			price3 := 999 + rand.Float64()*2
+			median := (price1 + price2 + price3) / 3
+			log.Println(time.Now().Format("2006-01-02 15:04:05"), "Median price:", median)
+			// send the median to all nodes
+			for _, node := range nodes {
+				http.Post(node+"/median", "application/json", bytes.NewBuffer([]byte(fmt.Sprintf(`{"median": %f}`, median))))
+			}
+
+			isRound = false
+			time.Sleep(10 * time.Second)
+		}
+	}()
+
 	// Start the HTTP server to communicate with other nodes
 	go func() {
 		log.Println("Starting HTTP server on " + fmt.Sprintf("%s%s", config.BaseUrl, config.Port))
@@ -68,30 +94,6 @@ func runNode(config NodeConfig) {
 			log.Fatalf("HTTP server failed: %s", err)
 		}
 	}()
-
-	var isRound bool
-
-	// Start the leader election
-	for {
-		if isRound {
-			continue
-		}
-		isRound = true
-
-		// fake get data from 3 providers
-		price1 := 999 + rand.Float64()*2
-		price2 := 999 + rand.Float64()*2
-		price3 := 999 + rand.Float64()*2
-		median := (price1 + price2 + price3) / 3
-		log.Println(time.Now().Format("2006-01-02 15:04:05"), "Median price:", median)
-		// send the median to all nodes
-		for _, node := range nodes {
-			http.Post(node+"/median", "application/json", bytes.NewBuffer([]byte(fmt.Sprintf(`{"median": %f}`, median))))
-		}
-
-		isRound = false
-		time.Sleep(10 * time.Second)
-	}
 }
 
 func requestNodes(node string) ([]string, error) {
