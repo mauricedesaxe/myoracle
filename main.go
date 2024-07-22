@@ -65,6 +65,7 @@ func runNode(config NodeConfig) {
 
 	var isRound bool
 	var lastMedian float64
+	var answers []float64
 
 	// POST /median - receives the median from the leader, and sends back a median if the req is valid
 	mux.HandleFunc("/median", func(w http.ResponseWriter, r *http.Request) {
@@ -82,6 +83,22 @@ func runNode(config NodeConfig) {
 		err := json.NewDecoder(r.Body).Decode(&request)
 		if err != nil {
 			http.Error(w, "Bad request", http.StatusBadRequest)
+			return
+		}
+
+		// If a round is already in process (i.e. this is a median response and we are the leader)
+		// then we need to check if we have enough answers to calculate a final answer.
+		// If we do we "push" a final answer, if not we store this new median and wait
+		// for more medians to arrive.
+		if isRound {
+			if len(answers) == len(nodes)/3*2 {
+				log.Println("Round complete", answers)
+				answers = []float64{}
+				isRound = false
+				return
+			}
+
+			answers = append(answers, request.Median)
 			return
 		}
 
