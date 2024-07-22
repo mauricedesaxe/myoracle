@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -83,6 +84,10 @@ func runNode(config NodeConfig) {
 		price3 := 999 + rand.Float64()*2
 		median := (price1 + price2 + price3) / 3
 		log.Println(time.Now().Format("2006-01-02 15:04:05"), "Median price:", median)
+		// send the median to all nodes
+		for _, node := range nodes {
+			http.Post(node+"/median", "application/json", bytes.NewBuffer([]byte(fmt.Sprintf(`{"median": %f}`, median))))
+		}
 
 		isRound = false
 		time.Sleep(10 * time.Second)
