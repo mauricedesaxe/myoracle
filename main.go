@@ -62,6 +62,7 @@ func runNode(config NodeConfig) {
 	})
 
 	var isRound bool
+	var lastMedian float64
 
 	// POST /median - receives the median from the leader, and sends back a median if the req is valid
 	http.HandleFunc("/median", func(w http.ResponseWriter, r *http.Request) {
@@ -104,8 +105,16 @@ func runNode(config NodeConfig) {
 			}
 			isRound = true
 
-			// send the median to all nodes
 			median := getFakeMedian()
+
+			diff := median - lastMedian
+			relDiff := diff / lastMedian
+			if relDiff < 0.01 {
+				continue
+			}
+			log.Println("Median changed by more than 1%")
+
+			// send the median to all nodes
 			log.Println(time.Now().Format("2006-01-02 15:04:05"), "Sending median:", median)
 			for _, node := range nodes {
 				http.Post(
@@ -115,6 +124,7 @@ func runNode(config NodeConfig) {
 				)
 			}
 
+			lastMedian = median
 			isRound = false
 			time.Sleep(10 * time.Second)
 		}
