@@ -8,6 +8,7 @@ import (
 	"log"
 	"math/rand/v2"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -66,6 +67,7 @@ func runNode(config NodeConfig) {
 	var isRound bool
 	var lastMedian float64
 	var answers []float64
+	var mu sync.Mutex
 
 	// POST /median - receives the median from the leader, and sends back a median if the req is valid
 	mux.HandleFunc("/median", func(w http.ResponseWriter, r *http.Request) {
@@ -85,6 +87,9 @@ func runNode(config NodeConfig) {
 			http.Error(w, "Bad request", http.StatusBadRequest)
 			return
 		}
+
+		mu.Lock()
+		defer mu.Unlock()
 
 		// If a round is already in process (i.e. this is a median response and we are the leader)
 		// then we need to check if we have enough answers to calculate a final answer.
@@ -119,16 +124,22 @@ func runNode(config NodeConfig) {
 	// Try to start a round every 10 seconds as a leader
 	go func() {
 		for {
+			mu.Lock()
 			if isRound {
+				mu.Unlock()
 				continue
 			}
 			isRound = true
+			mu.Unlock()
 
 			median := getFakeMedian()
 
 			diff := median - lastMedian
 			relDiff := diff / lastMedian
 			if relDiff < config.DiffThreshold {
+				mu.Lock()
+				isRound = false
+				mu.Unlock()
 				continue
 			}
 			log.Println("Median changed by more than", config.DiffThreshold*100, "%, sending to nodes")
@@ -147,7 +158,9 @@ func runNode(config NodeConfig) {
 			}
 
 			lastMedian = median
+			mu.Lock()
 			isRound = false
+			mu.Unlock()
 			time.Sleep(time.Duration(config.TimeInterval) * time.Second)
 		}
 	}()
