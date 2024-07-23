@@ -91,6 +91,8 @@ func runNode(config NodeConfig) {
 		mu.Lock()
 		defer mu.Unlock()
 
+		log.Println(time.Now().Format("2006-01-02 15:04:05"), "Received median from:", r.RemoteAddr, "value:", request.Median)
+
 		// If a round is already in process (i.e. this is a median response and we are the leader)
 		// then we need to check if we have enough answers to calculate a final answer.
 		// If we do we "push" a final answer, if not we store this new median and wait
@@ -113,7 +115,6 @@ func runNode(config NodeConfig) {
 		}
 
 		// if median from leader is valid, start round and provide a median back
-		log.Println(time.Now().Format("2006-01-02 15:04:05"), "Received median from:", r.RemoteAddr, "value:", request.Median)
 		isRound = true
 		_, err = http.Post(
 			config.BaseUrl+config.Port+"/median",
