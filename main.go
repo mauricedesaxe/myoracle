@@ -96,6 +96,11 @@ func runNode(config NodeConfig) {
 		// If we do we "push" a final answer, if not we store this new median and wait
 		// for more medians to arrive.
 		if isRound {
+			if len(nodes) < 3 {
+				log.Println("not enough nodes to complete a round")
+				return
+			}
+
 			if len(answers) == len(nodes)/3*2 { // 2/3 of the nodes need to respond
 				log.Println("Round complete", answers)
 				answers = []float64{}
