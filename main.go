@@ -101,7 +101,7 @@ func runNode(config NodeConfig) {
 				return
 			}
 
-			if len(answers) == len(nodes)/3*2 { // 2/3 of the nodes need to respond
+			if len(answers) >= len(nodes)/3*2 { // 2/3 of the nodes need to respond
 				log.Println("Round complete", answers)
 				answers = []float64{}
 				isRound = false
