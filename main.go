@@ -38,7 +38,7 @@ func main() {
 }
 
 func logg(node string, msg string) {
-	log.Printf("[%s] [%s] %s", time.Now().Format("2006-01-02 15:04:05"), node, msg)
+	log.Printf("[%s] %s", node, msg)
 }
 
 func runNode(config NodeConfig) {
