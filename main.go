@@ -50,7 +50,7 @@ func runNode(config NodeConfig) {
 	}
 	if config.Link != "" {
 		logg(config.BaseUrl+config.Port, "Syncing to: "+config.Link)
-		n, err := requestNodes(config)
+		n, err := syncToNodes(config)
 		if err != nil {
 			panic("error first syncing nodes: " + err.Error())
 		}
@@ -219,13 +219,17 @@ func getFakeMedian() float64 {
 	return median
 }
 
-func requestNodes(config NodeConfig) ([]string, error) {
+// Syncs to "link" node, then requests sync from all received nodes.
+// This is important because we need to make sure each node knows about each other node.
+// Warning: can return duplicates.
+func syncToNodes(config NodeConfig) ([]string, error) {
 	reqBody := bytes.NewBuffer([]byte(fmt.Sprintf(`{"node": "%s"}`, config.BaseUrl+config.Port)))
 	req, err := http.NewRequest("POST", config.Link+"/sync", reqBody)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
+
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -238,6 +242,37 @@ func requestNodes(config NodeConfig) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// request sync from each other node for redundancy AND to make sure
+	// each node knows about me (the new node)
+	for _, node := range nodes {
+		if node == config.BaseUrl+config.Port {
+			continue
+		}
+
+		reqBody := bytes.NewBuffer([]byte(fmt.Sprintf(`{"node": "%s"}`, config.BaseUrl+config.Port)))
+		req, err := http.NewRequest("POST", node+"/sync", reqBody)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+
+		var loopNodes []string
+		err = json.NewDecoder(resp.Body).Decode(&loopNodes)
+		if err != nil {
+			return nil, err
+		}
+
+		nodes = append(nodes, loopNodes...)
+		nodes = removeDuplicates(nodes)
+	}
+
 	return nodes, nil
 }
 
