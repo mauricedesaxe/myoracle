@@ -15,6 +15,8 @@ func TestMain(t *testing.T) {
 		TimeInterval:  1,
 	})
 
+	time.Sleep(1 * time.Second)
+
 	// Run the second node
 	go runNode(NodeConfig{
 		Link:          "http://localhost:3000",
