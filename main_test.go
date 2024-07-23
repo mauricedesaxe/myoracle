@@ -25,5 +25,5 @@ func TestMain(t *testing.T) {
 	})
 
 	// Allow some time for nodes to communicate
-	time.Sleep(5 * time.Second)
+	time.Sleep(10 * time.Second)
 }
