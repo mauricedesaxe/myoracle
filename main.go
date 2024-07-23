@@ -104,6 +104,7 @@ func runNode(config NodeConfig) {
 		if isRound {
 			if len(nodes) < 3 {
 				logg(config.BaseUrl+config.Port, "not enough nodes to complete a round")
+				isRound = false
 				return
 			}
 
