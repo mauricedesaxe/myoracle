@@ -37,6 +37,10 @@ func main() {
 	})
 }
 
+func logg(node string, msg string) {
+	log.Printf("[%s] [%s] %s", time.Now().Format("2006-01-02 15:04:05"), node, msg)
+}
+
 func runNode(config NodeConfig) {
 	mux := http.NewServeMux()
 
@@ -45,13 +49,13 @@ func runNode(config NodeConfig) {
 		config.BaseUrl + config.Port,
 	}
 	if config.Link != "" {
-		log.Println("Syncing to:", config.Link)
+		logg(config.BaseUrl+config.Port, "Syncing to: "+config.Link)
 		n, err := requestNodes(config.Link)
 		if err != nil {
 			panic("error first syncing nodes: " + err.Error())
 		}
 		nodes = append(nodes, n...)
-		log.Println("Synced to:", len(nodes)-1, "nodes") // subtract 1 because the node itself is included
+		logg(config.BaseUrl+config.Port, "Synced to: "+fmt.Sprint(len(nodes)-1)+" nodes") // subtract 1 because the node itself is included
 	}
 
 	// POST /sync - returns a list of nodes
@@ -60,7 +64,7 @@ func runNode(config NodeConfig) {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		log.Println(time.Now().Format("2006-01-02 15:04:05"), "Sync request from:", r.RemoteAddr)
+		logg(config.BaseUrl+config.Port, "Sync request from: "+r.RemoteAddr)
 		json.NewEncoder(w).Encode(nodes)
 	})
 
@@ -91,7 +95,7 @@ func runNode(config NodeConfig) {
 		mu.Lock()
 		defer mu.Unlock()
 
-		log.Println(time.Now().Format("2006-01-02 15:04:05"), "Received median from:", r.RemoteAddr, "value:", request.Median)
+		logg(config.BaseUrl+config.Port, "Received median from: "+r.RemoteAddr+" value: "+fmt.Sprint(request.Median))
 
 		// If a round is already in process (i.e. this is a median response and we are the leader)
 		// then we need to check if we have enough answers to calculate a final answer.
@@ -99,12 +103,12 @@ func runNode(config NodeConfig) {
 		// for more medians to arrive.
 		if isRound {
 			if len(nodes) < 3 {
-				log.Println("not enough nodes to complete a round")
+				logg(config.BaseUrl+config.Port, "not enough nodes to complete a round")
 				return
 			}
 
 			if len(answers) >= len(nodes)/3*2 { // 2/3 of the nodes need to respond
-				log.Println("Round complete", answers)
+				logg(config.BaseUrl+config.Port, "Round complete: "+fmt.Sprint(answers))
 				answers = []float64{}
 				isRound = false
 				return
@@ -122,7 +126,7 @@ func runNode(config NodeConfig) {
 			bytes.NewBuffer([]byte(fmt.Sprintf(`{"median": %f}`, getFakeMedian()))),
 		)
 		if err != nil {
-			log.Println("Error sending median:", err)
+			logg(config.BaseUrl+config.Port, "Error sending median: "+err.Error())
 		}
 		isRound = false
 	})
@@ -153,10 +157,10 @@ func runNode(config NodeConfig) {
 				mu.Unlock()
 				continue
 			}
-			log.Println("Median changed by more than", config.DiffThreshold*100, "%, sending to nodes")
+			logg(config.BaseUrl+config.Port, "Median changed by more than "+fmt.Sprint(config.DiffThreshold*100)+"%, sending to nodes")
 
 			// send the median to all nodes
-			log.Println(time.Now().Format("2006-01-02 15:04:05"), "Sending median:", median)
+			logg(config.BaseUrl+config.Port, "Sending median: "+fmt.Sprint(median))
 			for _, node := range nodes {
 				if node == config.BaseUrl+config.Port {
 					continue
@@ -176,7 +180,7 @@ func runNode(config NodeConfig) {
 	}()
 
 	// Start the HTTP server to communicate with other nodes
-	log.Println("Starting HTTP server on " + fmt.Sprintf("%s%s", config.BaseUrl, config.Port))
+	logg(config.BaseUrl+config.Port, "Starting HTTP server on "+fmt.Sprintf("%s%s", config.BaseUrl, config.Port))
 	if err := http.ListenAndServe(config.Port, mux); err != nil {
 		log.Fatalf("HTTP server failed: %s", err)
 	}
