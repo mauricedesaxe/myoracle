@@ -82,10 +82,8 @@ func runNode(config NodeConfig) {
 		json.NewEncoder(w).Encode(nodes)
 	})
 
-	var lastMedian float64
-
-	// GET /median - receives a median request from the leader
-	mux.HandleFunc("/median", func(w http.ResponseWriter, r *http.Request) {
+	// GET /answer - returns an answer; is to be called by the round leader
+	mux.HandleFunc("/answer", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -109,10 +107,11 @@ func runNode(config NodeConfig) {
 			return
 		}
 		logg(config.BaseUrl+config.Port, "Got a median request from "+requestingNode)
-		json.NewEncoder(w).Encode(getFakeMedian())
+		json.NewEncoder(w).Encode(getAnswer())
 	})
 
 	// Try to start a round every 10 seconds as a leader
+	var lastAnswer float64
 	var i int
 	go func() {
 		for {
@@ -121,9 +120,9 @@ func runNode(config NodeConfig) {
 			}
 			i++
 
-			median := getFakeMedian()
-			diff := median - lastMedian
-			relDiff := diff / lastMedian
+			myAnswer := getAnswer()
+			diff := myAnswer - lastAnswer
+			relDiff := diff / lastAnswer
 			if relDiff < config.DiffThreshold {
 				continue
 			}
@@ -134,7 +133,7 @@ func runNode(config NodeConfig) {
 				continue
 			}
 
-			var medians []float64
+			var answers []float64
 			for _, node := range nodes {
 				if node == config.BaseUrl+config.Port {
 					continue
@@ -142,27 +141,27 @@ func runNode(config NodeConfig) {
 
 				logg(config.BaseUrl+config.Port, "Requesting median from "+node)
 				resp, err := http.Get(
-					node + "/median?node=" + config.BaseUrl + config.Port,
+					node + "/answer?node=" + config.BaseUrl + config.Port,
 				)
 				if err != nil {
 					logg(config.BaseUrl+config.Port, "Error requesting median from "+node+": "+err.Error())
 					continue
 				}
-				var median float64
-				err = json.NewDecoder(resp.Body).Decode(&median)
+				var answer float64
+				err = json.NewDecoder(resp.Body).Decode(&answer)
 				if err != nil {
 					logg(config.BaseUrl+config.Port, "Error decoding median from "+node+": "+err.Error())
 					continue
 				}
 				resp.Body.Close()
 
-				medians = append(medians, median)
+				answers = append(answers, answer)
 			}
 
-			logg(config.BaseUrl+config.Port, "Medians: "+fmt.Sprint(medians))
-			newMedian := getMedian(medians)
-			logg(config.BaseUrl+config.Port, "New median: "+fmt.Sprint(newMedian))
-			lastMedian = newMedian
+			logg(config.BaseUrl+config.Port, "Medians: "+fmt.Sprint(answers))
+			newAnswer := getMedian(answers)
+			logg(config.BaseUrl+config.Port, "New median: "+fmt.Sprint(newAnswer))
+			lastAnswer = newAnswer
 		}
 	}()
 
@@ -173,7 +172,7 @@ func runNode(config NodeConfig) {
 	}
 }
 
-func getFakeMedian() float64 {
+func getAnswer() float64 {
 	price1 := 999 + rand.Float64()*2
 	price2 := 999 + rand.Float64()*2
 	price3 := 999 + rand.Float64()*2
