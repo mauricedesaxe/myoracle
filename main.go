@@ -116,6 +116,7 @@ func runNode(config NodeConfig) {
 			}
 
 			answers = append(answers, request.Median)
+			logg(config.BaseUrl+config.Port, "Answer received: "+fmt.Sprint(request.Median)+" answers: "+fmt.Sprint(answers))
 			return
 		}
 
