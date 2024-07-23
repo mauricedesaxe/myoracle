@@ -165,6 +165,7 @@ func runNode(config NodeConfig) {
 				if node == config.BaseUrl+config.Port {
 					continue
 				}
+				logg(config.BaseUrl+config.Port, "Sending median: "+fmt.Sprint(median)+" to "+node)
 				http.Post(
 					node+"/median",
 					"application/json",
