@@ -182,7 +182,6 @@ func runNode(config NodeConfig) {
 				mu.Unlock()
 				continue
 			}
-			logg(config.BaseUrl+config.Port, "Sending median: "+fmt.Sprint(median))
 			for _, node := range nodes {
 				if node == config.BaseUrl+config.Port {
 					continue
