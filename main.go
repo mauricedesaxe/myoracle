@@ -160,7 +160,7 @@ func runNode(config NodeConfig) {
 				mu.Unlock()
 				continue
 			}
-			logg(config.BaseUrl+config.Port, "Median changed by more than "+fmt.Sprint(config.DiffThreshold*100)+"%, sending to nodes")
+			logg(config.BaseUrl+config.Port, "Median changed by more than "+fmt.Sprint(config.DiffThreshold*100)+"%")
 
 			// send the median to all nodes
 			if len(nodes) < 3 {
