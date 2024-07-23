@@ -95,6 +95,7 @@ func runNode(config NodeConfig) {
 
 		// decode median
 		type Request struct {
+			Node   string  `json:"node"`
 			Median float64 `json:"median"`
 		}
 		var request Request
@@ -107,7 +108,7 @@ func runNode(config NodeConfig) {
 		mu.Lock()
 		defer mu.Unlock()
 
-		logg(config.BaseUrl+config.Port, "Received median from: "+r.RemoteAddr+" value: "+fmt.Sprint(request.Median))
+		logg(config.BaseUrl+config.Port, "Received median from: "+request.Node+" value: "+fmt.Sprint(request.Median))
 
 		// If a round is already in process (i.e. this is a median response and we are the leader)
 		// then we need to check if we have enough answers to calculate a final answer.
@@ -137,7 +138,7 @@ func runNode(config NodeConfig) {
 		_, err = http.Post(
 			config.BaseUrl+config.Port+"/median",
 			"application/json",
-			bytes.NewBuffer([]byte(fmt.Sprintf(`{"median": %f}`, getFakeMedian()))),
+			bytes.NewBuffer([]byte(fmt.Sprintf(`{"node": "%s", "median": %f}`, config.BaseUrl+config.Port, getFakeMedian()))),
 		)
 		if err != nil {
 			logg(config.BaseUrl+config.Port, "Error sending median: "+err.Error())
@@ -190,7 +191,7 @@ func runNode(config NodeConfig) {
 				http.Post(
 					node+"/median",
 					"application/json",
-					bytes.NewBuffer([]byte(fmt.Sprintf(`{"median": %f}`, median))),
+					bytes.NewBuffer([]byte(fmt.Sprintf(`{"node": "%s", "median": %f}`, config.BaseUrl+config.Port, median))),
 				)
 			}
 
