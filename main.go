@@ -128,8 +128,13 @@ func runNode(config NodeConfig) {
 	})
 
 	// Try to start a round every 10 seconds as a leader
+	var i int
 	go func() {
 		for {
+			if i != 0 {
+				time.Sleep(time.Duration(config.TimeInterval) * time.Second)
+			}
+
 			mu.Lock()
 			if isRound {
 				mu.Unlock()
@@ -167,7 +172,6 @@ func runNode(config NodeConfig) {
 			mu.Lock()
 			isRound = false
 			mu.Unlock()
-			time.Sleep(time.Duration(config.TimeInterval) * time.Second)
 		}
 	}()
 
