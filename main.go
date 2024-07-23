@@ -50,7 +50,7 @@ func runNode(config NodeConfig) {
 	}
 	if config.Link != "" {
 		logg(config.BaseUrl+config.Port, "Syncing to: "+config.Link)
-		n, err := requestNodes(config.Link)
+		n, err := requestNodes(config)
 		if err != nil {
 			panic("error first syncing nodes: " + err.Error())
 		}
@@ -58,13 +58,25 @@ func runNode(config NodeConfig) {
 		logg(config.BaseUrl+config.Port, "Synced to: "+fmt.Sprint(len(nodes)-1)+" nodes") // subtract 1 because the node itself is included
 	}
 
-	// POST /sync - returns a list of nodes
 	mux.HandleFunc("/sync", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		logg(config.BaseUrl+config.Port, "Sync request from: "+r.RemoteAddr)
+
+		// decode node from request
+		type Request struct {
+			Node string `json:"node"`
+		}
+		var request Request
+		err := json.NewDecoder(r.Body).Decode(&request)
+		if err != nil {
+			http.Error(w, "Bad request", http.StatusBadRequest)
+			return
+		}
+
+		nodes = append(nodes, request.Node)
+		logg(config.BaseUrl+config.Port, "Got request to sync from "+request.Node)
 		json.NewEncoder(w).Encode(nodes)
 	})
 
@@ -205,8 +217,9 @@ func getFakeMedian() float64 {
 	return median
 }
 
-func requestNodes(node string) ([]string, error) {
-	req, err := http.NewRequest("POST", node+"/sync", nil)
+func requestNodes(config NodeConfig) ([]string, error) {
+	reqBody := bytes.NewBuffer([]byte(fmt.Sprintf(`{"node": "%s"}`, config.BaseUrl+config.Port)))
+	req, err := http.NewRequest("POST", config.Link+"/sync", reqBody)
 	if err != nil {
 		return nil, err
 	}
