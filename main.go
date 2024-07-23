@@ -8,7 +8,7 @@ import (
 	"log"
 	"math/rand/v2"
 	"net/http"
-	"sync"
+	"sort"
 	"time"
 )
 
@@ -82,70 +82,34 @@ func runNode(config NodeConfig) {
 		json.NewEncoder(w).Encode(nodes)
 	})
 
-	var isRound bool
 	var lastMedian float64
-	var answers []float64
-	var mu sync.Mutex
 
-	// POST /median - receives the median from the leader, and sends back a median if the req is valid
+	// GET /median - receives a median request from the leader
 	mux.HandleFunc("/median", func(w http.ResponseWriter, r *http.Request) {
-		// only allow POST requests
-		if r.Method != "POST" {
+		if r.Method != "GET" {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 
-		// decode median
-		type Request struct {
-			Node   string  `json:"node"`
-			Median float64 `json:"median"`
-		}
-		var request Request
-		err := json.NewDecoder(r.Body).Decode(&request)
-		if err != nil {
+		requestingNode := r.URL.Query().Get("node")
+		if requestingNode == "" {
 			http.Error(w, "Bad request", http.StatusBadRequest)
 			return
 		}
 
-		mu.Lock()
-		defer mu.Unlock()
-
-		logg(config.BaseUrl+config.Port, "Received median from: "+request.Node+" value: "+fmt.Sprint(request.Median))
-
-		// If a round is already in process (i.e. this is a median response and we are the leader)
-		// then we need to check if we have enough answers to calculate a final answer.
-		// If we do we "push" a final answer, if not we store this new median and wait
-		// for more medians to arrive.
-		if isRound {
-			if len(nodes) < 3 {
-				logg(config.BaseUrl+config.Port, "not enough nodes to complete a round")
-				isRound = false
-				return
+		var isValidNode bool
+		for _, node := range nodes {
+			if node == requestingNode {
+				isValidNode = true
+				break
 			}
-
-			if len(answers) >= len(nodes)/3*2 { // 2/3 of the nodes need to respond
-				logg(config.BaseUrl+config.Port, "Round complete: "+fmt.Sprint(answers))
-				answers = []float64{}
-				isRound = false
-				return
-			}
-
-			answers = append(answers, request.Median)
-			logg(config.BaseUrl+config.Port, "Answer received: "+fmt.Sprint(request.Median)+" answers: "+fmt.Sprint(answers))
+		}
+		if !isValidNode {
+			http.Error(w, "Invalid node", http.StatusBadRequest)
 			return
 		}
-
-		// if median from leader is valid, start round and provide a median back
-		isRound = true
-		_, err = http.Post(
-			config.BaseUrl+config.Port+"/median",
-			"application/json",
-			bytes.NewBuffer([]byte(fmt.Sprintf(`{"node": "%s", "median": %f}`, config.BaseUrl+config.Port, getFakeMedian()))),
-		)
-		if err != nil {
-			logg(config.BaseUrl+config.Port, "Error sending median: "+err.Error())
-		}
-		isRound = false
+		logg(config.BaseUrl+config.Port, "Got a median request from "+requestingNode)
+		json.NewEncoder(w).Encode(getFakeMedian())
 	})
 
 	// Try to start a round every 10 seconds as a leader
@@ -157,50 +121,48 @@ func runNode(config NodeConfig) {
 			}
 			i++
 
-			mu.Lock()
-			if isRound {
-				mu.Unlock()
-				continue
-			}
-			isRound = true
-			mu.Unlock()
-
 			median := getFakeMedian()
-
 			diff := median - lastMedian
 			relDiff := diff / lastMedian
 			if relDiff < config.DiffThreshold {
-				mu.Lock()
-				isRound = false
-				mu.Unlock()
 				continue
 			}
 			logg(config.BaseUrl+config.Port, "Median changed by more than "+fmt.Sprint(config.DiffThreshold*100)+"%")
 
-			// send the median to all nodes
 			if len(nodes) < 3 {
 				logg(config.BaseUrl+config.Port, "not enough nodes to start a round")
-				mu.Lock()
-				isRound = false
-				mu.Unlock()
 				continue
 			}
+
+			var medians []float64
 			for _, node := range nodes {
 				if node == config.BaseUrl+config.Port {
 					continue
 				}
-				logg(config.BaseUrl+config.Port, "Sending median: "+fmt.Sprint(median)+" to "+node)
-				http.Post(
-					node+"/median",
-					"application/json",
-					bytes.NewBuffer([]byte(fmt.Sprintf(`{"node": "%s", "median": %f}`, config.BaseUrl+config.Port, median))),
+
+				logg(config.BaseUrl+config.Port, "Requesting median from "+node)
+				resp, err := http.Get(
+					node + "/median?node=" + config.BaseUrl + config.Port,
 				)
+				if err != nil {
+					logg(config.BaseUrl+config.Port, "Error requesting median from "+node+": "+err.Error())
+					continue
+				}
+				var median float64
+				err = json.NewDecoder(resp.Body).Decode(&median)
+				if err != nil {
+					logg(config.BaseUrl+config.Port, "Error decoding median from "+node+": "+err.Error())
+					continue
+				}
+				resp.Body.Close()
+
+				medians = append(medians, median)
 			}
 
-			lastMedian = median
-			mu.Lock()
-			isRound = false
-			mu.Unlock()
+			logg(config.BaseUrl+config.Port, "Medians: "+fmt.Sprint(medians))
+			newMedian := getMedian(medians)
+			logg(config.BaseUrl+config.Port, "New median: "+fmt.Sprint(newMedian))
+			lastMedian = newMedian
 		}
 	}()
 
@@ -286,4 +248,10 @@ func removeDuplicates(nodes []string) []string {
 		}
 	}
 	return uniqueNodes
+}
+
+func getMedian(numbers []float64) float64 {
+	sort.Float64s(numbers)
+	median := numbers[len(numbers)/2]
+	return median
 }
