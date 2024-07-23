@@ -51,7 +51,7 @@ func runNode(config NodeConfig) {
 			panic("error first syncing nodes: " + err.Error())
 		}
 		nodes = append(nodes, n...)
-		log.Println("Synced to:", len(nodes), "nodes")
+		log.Println("Synced to:", len(nodes)-1, "nodes") // subtract 1 because the node itself is included
 	}
 
 	// POST /sync - returns a list of nodes
