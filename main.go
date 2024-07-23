@@ -160,6 +160,13 @@ func runNode(config NodeConfig) {
 			logg(config.BaseUrl+config.Port, "Median changed by more than "+fmt.Sprint(config.DiffThreshold*100)+"%, sending to nodes")
 
 			// send the median to all nodes
+			if len(nodes) < 3 {
+				logg(config.BaseUrl+config.Port, "not enough nodes to start a round")
+				mu.Lock()
+				isRound = false
+				mu.Unlock()
+				continue
+			}
 			logg(config.BaseUrl+config.Port, "Sending median: "+fmt.Sprint(median))
 			for _, node := range nodes {
 				if node == config.BaseUrl+config.Port {
