@@ -55,6 +55,7 @@ func runNode(config NodeConfig) {
 			panic("error first syncing nodes: " + err.Error())
 		}
 		nodes = append(nodes, n...)
+		nodes = removeDuplicates(nodes)
 		logg(config.BaseUrl+config.Port, "Synced to: "+fmt.Sprint(len(nodes)-1)+" nodes") // subtract 1 because the node itself is included
 	}
 
@@ -76,6 +77,7 @@ func runNode(config NodeConfig) {
 		}
 
 		nodes = append(nodes, request.Node)
+		nodes = removeDuplicates(nodes)
 		logg(config.BaseUrl+config.Port, "Got request to sync from "+request.Node)
 		json.NewEncoder(w).Encode(nodes)
 	})
@@ -237,4 +239,16 @@ func requestNodes(config NodeConfig) ([]string, error) {
 		return nil, err
 	}
 	return nodes, nil
+}
+
+func removeDuplicates(nodes []string) []string {
+	uniqueNodes := make([]string, 0, len(nodes))
+	nodeMap := make(map[string]bool)
+	for _, node := range nodes {
+		if !nodeMap[node] {
+			uniqueNodes = append(uniqueNodes, node)
+			nodeMap[node] = true
+		}
+	}
+	return uniqueNodes
 }
