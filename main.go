@@ -140,6 +140,7 @@ func runNode(config NodeConfig) {
 			if i != 0 {
 				time.Sleep(time.Duration(config.TimeInterval) * time.Second)
 			}
+			i++
 
 			mu.Lock()
 			if isRound {
